@@ -1,0 +1,30 @@
+--- ucp_pm_compose.php	Sat Feb 06 20:41:36 2010
++++ ucp_pm_compose.php	Sat Feb 06 21:28:13 2010
+@@ -435,16 +435,25 @@
+ 	}
+ 
+ 	// Get maximum number of allowed recipients
+-	$sql = 'SELECT MAX(g.group_max_recipients) as max_recipients
++	$sql = 'SELECT g.group_max_recipients as max_recipients
+ 		FROM ' . GROUPS_TABLE . ' g, ' . USER_GROUP_TABLE . ' ug
+ 		WHERE ug.user_id = ' . $user->data['user_id'] . '
+ 			AND ug.user_pending = 0
+ 			AND ug.group_id = g.group_id';
++			
++	// It's clearly a bug, not a support request http://www.phpbb.com/bugs/phpbb3/48495, http://www.phpbb.com/community/viewtopic.php?f=46&t=1710235&start=0
+ 	$result = $db->sql_query($sql);
+-	$max_recipients = (int) $db->sql_fetchfield('max_recipients');
++	$max_recipients_rowset = $db->sql_fetchrowset();
+ 	$db->sql_freeresult($result);
++	
++	$max_recipents_result = array();
++	foreach ($max_recipients_rowset as $row)
++	{
++		$max_recipents_result[] = ($row['max_recipients'] === 0 && $config['pm_max_recipients'] !== 0) ? $config['pm_max_recipients'] : $row['max_recipients'];
++	}
+ 
+-	$max_recipients = (!$max_recipients) ? $config['pm_max_recipients'] : $max_recipients;
++	$max_recipients = (in_array(0, $max_recipents_result)) ? $config['pm_max_recipients'] : max($max_recipents_result);
+ 
+ 	// If this is a quote/reply "to all"... we may increase the max_recpients to the number of original recipients
+ 	if (($action == 'reply' || $action == 'quote') && $max_recipients && $reply_to_all)
